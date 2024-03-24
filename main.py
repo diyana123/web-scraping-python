@@ -15,6 +15,6 @@ def main():
     obj2 = OTCProductScraper(obj=obj1)
     # df = obj2.scrape_data()
     # obj2.remove_duplicates()
-    # obj2.scrape_products()
+    obj2.scrape_products()
 
 main()
