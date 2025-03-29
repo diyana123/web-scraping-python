@@ -48,7 +48,7 @@ class icanScraper:
             time.sleep(5)  # Increased sleep time
 
             # Wait for new products to load
-            WebDriverWait(self.driver, 5).until(
+            WebDriverWait(self.driver, 10).until(
                 EC.presence_of_all_elements_located((By.CLASS_NAME, "va-card__content"))
             )
 
