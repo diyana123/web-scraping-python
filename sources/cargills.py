@@ -45,7 +45,7 @@ class CargillsScraper:
         # Save results to 'cargills.csv'
         with open('cargills.csv', 'w', newline='', encoding='utf-8') as csvfile:
             csv_writer = csv.writer(csvfile)
-            csv_writer.writerow(["Product Name", "Quantity", "Price"])  # Added Quantity column
+            csv_writer.writerow(["name", "Quantity", "Price"])  # Added Quantity column
             csv_writer.writerows(collected_data)
 
         print(f"✅ Scraped {len(collected_data)} products. Saved to cargills.csv.")

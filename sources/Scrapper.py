@@ -24,7 +24,7 @@ class UberEatsScraper:
         self.driver.get(url)
         time.sleep(5)  # Wait for initial page load
 
-        self.load_all_products()  # Ensure all products are loaded
+        self.load_all_products()  # Scroll until all products load
 
         collected_data = self.extract_product_data()  # Extract product details
 
@@ -33,33 +33,31 @@ class UberEatsScraper:
         # Save results to CSV
         with open('ubereats_products.csv', 'w', newline='', encoding='utf-8') as csvfile:
             csv_writer = csv.writer(csvfile)
-            csv_writer.writerow(["Price", "Product Name"])
+            csv_writer.writerow(["Price", "name"])
             csv_writer.writerows(collected_data)
 
         print(f"✅ Scraped {len(collected_data)} products. Saved to ubereats_products.csv.")
 
     def load_all_products(self):
-      """ Scrolls until all products are loaded. """
-      last_height = self.driver.execute_script("return document.body.scrollHeight")
-      scroll_attempts = 0
-      max_attempts = 50  # Increase max attempts for more thorough scrolling
+        """ Scrolls until all products are loaded. """
+        max_attempts = 50  # Maximum scroll attempts
+        last_count = 0  # Track number of products
+        attempt = 0
 
-      while scroll_attempts < max_attempts:
-          self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-          time.sleep(5)  # Increased sleep time
+        while attempt < max_attempts:
+            self.driver.execute_script("window.scrollBy(0, 500);")  # Scroll down 500px
+            time.sleep(3)  # Allow time for loading
 
-          # Wait for new products to load
-          WebDriverWait(self.driver, 5).until(
-              EC.presence_of_all_elements_located((By.XPATH, "//span[@data-testid='rich-text']"))
-          )
+            # Count products on the page
+            product_elements = self.driver.find_elements(By.XPATH, "//span[@data-testid='rich-text']")
+            new_count = len(product_elements) // 2  # Since each product has 2 spans (name + price)
 
-          new_height = self.driver.execute_script("return document.body.scrollHeight")
-          if new_height == last_height:
-              break  # Stop if no new content is loaded
+            print(f"🔄 Attempt {attempt + 1}: {new_count} products loaded...")
 
-          last_height = new_height
-          scroll_attempts += 1
-
+            if new_count == last_count:
+                break  # Stop scrolling if no new products are loaded
+            last_count = new_count
+            attempt += 1
 
     def extract_product_data(self):
         """ Extracts all product names and prices. """
@@ -67,7 +65,7 @@ class UberEatsScraper:
 
         try:
             WebDriverWait(self.driver, 10).until(
-                EC.presence_of_all_elements_located((By.XPATH, "//span[@data-testid='rich-text']"))
+                EC.visibility_of_all_elements_located((By.XPATH, "//span[@data-testid='rich-text']"))
             )
 
             product_elements = self.driver.find_elements(By.XPATH, "//span[@data-testid='rich-text']")
@@ -76,21 +74,15 @@ class UberEatsScraper:
                 name = product_elements[i].text.strip()
                 price = product_elements[i + 1].text.strip().replace("LKR", "").strip()
 
-
                 # Ignore unwanted lines
                 if "38, Iswari Road, Colombo 5,  Sri Lanka" in name or "Celeste Daily" in name:
-                      continue  # Skip these lines
-#                 #Remove "celeste daily-SKU xxxx"
-#                 name = re.sub(r" - Celeste Daily - SKU \d+", "", name)
+                    continue  # Skip these lines
 
-
-                # Ensure that the tomatoes product is captured
-                if "Tomato" in name or "tomato" in name:
-                    print(f"Found Tomato Product: {name}, Price: {price}")
+                # Remove "celeste daily-SKU xxxx"
+                name = re.sub(r" - Celeste Daily - SKU \d+", "", name)
 
                 if name and price:
                     collected_data.add((name, price))  # Add product only if valid
-
 
         except Exception as e:
             print(f"❌ Error extracting products: {e}")

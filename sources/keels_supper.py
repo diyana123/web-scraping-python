@@ -87,7 +87,7 @@ class KeellsProductScraper:
             # Save results to CSV
             with open('keells_products.csv', 'w', newline='', encoding='utf-8') as csvfile:
                 csv_writer = csv.writer(csvfile)
-                csv_writer.writerow(["Product Name", "Price"])
+                csv_writer.writerow(["name", "Price"])
                 csv_writer.writerows(products)
 
             print(f"Scraped {len(products)} products. Saved to keells_products.csv.")

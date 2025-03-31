@@ -32,7 +32,7 @@ class icanScraper:
         # Save results to CSV
         with open('ican mall products.csv', 'w', newline='', encoding='utf-8') as csvfile:
             csv_writer = csv.writer(csvfile)
-            csv_writer.writerow(["Product Name", "Price"])
+            csv_writer.writerow(["name", "Price"])
             csv_writer.writerows(collected_data)
 
         print(f"✅ Scraped {len(collected_data)} products. Saved to products.csv.")
@@ -81,6 +81,11 @@ class icanScraper:
                 # Extract the price
                 price_labels = price_element.find_elements(By.CLASS_NAME, "price-label")
                 price = "".join([label.text.strip() for label in price_labels if label.text.strip()])
+
+
+    # Ensure that the Red onion product is captured
+                if "Red onion" in name or "onion" in name:
+                    print(f"Found Red onion Product: {name}, Price: {price}")
 
                 if name and price:
                     collected_data.add((name, price))  # Add product only if valid
