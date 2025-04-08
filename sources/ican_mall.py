@@ -84,9 +84,10 @@ class icanScraper:
 
 
     # Ensure that the Red onion product is captured
-                if "Red onion" in name or "onion" in name:
+                if "Red onion" in name or "Onion Big" in name:
                     print(f"Found Red onion Product: {name}, Price: {price}")
-
+                if "carrot" in name.lower() or "ginger" in name.lower():
+                    print(f"✅ Found {name} - {price}")
                 if name and price:
                     collected_data.add((name, price))  # Add product only if valid
 

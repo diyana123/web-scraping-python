@@ -3,58 +3,61 @@ import traceback
 import os
 import pandas as pd
 import logging
+import threading
+import time
 from fastapi import FastAPI
 from helpers.helper import SeleniumHelper
 from sources.Scrapper import UberEatsScraper
-from sources.keels_supper import KeellsProductScraper
 from sources.ican_mall import icanScraper
 from sources.cargills import CargillsScraper
+from fastapi.middleware.cors import CORSMiddleware
 
-# Setup logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-CSV_FILES = {
-    "ican mall products.csv": "Ican Mall",
-    "keells_products.csv": "Keells",
-    "ubereats_products.csv": "Uber Eats",
-    "cargills.csv": "Cargills"
-}
 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Or your domain/IP
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+CSV_FILES = {
+    "ican mall products.csv": "ican_mall",
+    "ubereats_products.csv": "uber",
+    "cargills.csv": "cargills"
+}
 MERGED_FILE = "merged_products.csv"
 
 def scrape_products():
-    """Runs all scrapers and merges data."""
     try:
-        logger.info("Starting scraping process...")
+        logger.info("🔄 Starting scraping process...")
 
         scrapers = [
-            (UberEatsScraper(), "UberEats"),
-            (KeellsProductScraper(), "Keells"),
-            (CargillsScraper(), "Cargills"),
-            (icanScraper(), "Ican Mall")
+            (UberEatsScraper(), "uber"),
+            (CargillsScraper(), "cargills"),
+            (icanScraper(), "ican_mall")
         ]
 
         for scraper, name in scrapers:
-            logger.info(f"Scraping {name}...")
+            logger.info(f"🕷 Scraping {name}...")
             scraper.scrape_products()
             logger.info(f"✅ {name} scraping complete.")
 
         merge_scraped_data()
-        logger.info("✅ Scraping & Merging Done!")
-        return True
-
+        logger.info("✅ All scraping and merging done!")
     except Exception as e:
-        logger.error(f"❌ Scraping Error: {e}")
+        logger.error(f"❌ Scraping error: {e}")
         traceback.print_exc()
-        return False
 
 def merge_scraped_data():
-    """Merges all scraped CSV files into one."""
     try:
-        logger.info("Merging scraped CSV files...")
+        logger.info("🔗 Merging scraped CSV files...")
         dataframes = []
 
         for file_name, source in CSV_FILES.items():
@@ -71,29 +74,27 @@ def merge_scraped_data():
             logger.info(f"✅ Merged file saved as {MERGED_FILE}")
         else:
             logger.warning("⚠️ No data to merge.")
-
     except Exception as e:
-        logger.error(f"❌ Merging Error: {e}")
+        logger.error(f"❌ Merge error: {e}")
         traceback.print_exc()
 
-@app.get("/products")
-async def get_products():
-    """Scrapes data on request and returns it."""
-    logger.info("📢 Received API request to fetch products.")
-
-    success = scrape_products()
-    if not success:
-        return {"error": "Scraping failed. Check logs for details."}
-
-    if not os.path.exists(MERGED_FILE):
-        return {"message": "Scraping in progress or failed. Try again later."}
-
+@app.get("/merged-products")
+async def get_merged_products():
     try:
+        if not os.path.exists(MERGED_FILE):
+            return {"message": "Scraping not complete yet."}
         df = pd.read_csv(MERGED_FILE)
-        if df.empty:
-            return {"message": "No data available yet. Try again later."}
         return json.loads(df.to_json(orient="records"))
     except Exception as e:
-        logger.error(f"❌ Error reading {MERGED_FILE}: {e}")
+        logger.error(f"❌ Error loading merged file: {e}")
         traceback.print_exc()
         return {"error": str(e)}
+
+# Background thread for automatic scraping
+def scheduler_loop(interval_minutes=60):
+    while True:
+        scrape_products()
+        time.sleep(interval_minutes * 60)
+
+# Start background scraping thread on app launch
+threading.Thread(target=scheduler_loop, daemon=True).start()

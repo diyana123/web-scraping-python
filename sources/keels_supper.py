@@ -16,33 +16,26 @@ class KeellsProductScraper:
         self.options.add_argument('--ignore-ssl-errors')
         service = Service(executable_path=self.CHROME_DRIVER_PATH)
         self.driver = webdriver.Chrome(service=service, options=self.options)
-        self.wait = WebDriverWait(self.driver, 25)  # Increased wait time
+        self.wait = WebDriverWait(self.driver, 25)
 
-    def navigate_to_fresh_vegetables(self):
-        """Navigate through the Keells website to reach the Fresh Vegetables section."""
+    def navigate_to_fruits_and_vegetables(self):
+        """Navigate to the Fruits & Vegetables section where coconuts may be found."""
         self.driver.get("https://www.keellssuper.com/welcome")
-        time.sleep(7)  # Wait for the page to fully load
+        time.sleep(7)
 
         try:
-            # Click "Browse the Store"
             browse_button = self.wait.until(EC.element_to_be_clickable((By.ID, "welcome_browse_btn")))
             browse_button.click()
             time.sleep(5)
 
-            # Click "Categories"
             categories_button = self.wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "category_menu_btn_product_search")))
             categories_button.click()
             time.sleep(5)
 
-            # Click "Vegetables"
-            vegetables_button = self.wait.until(EC.element_to_be_clickable((By.ID, "dep_id_16")))
-            vegetables_button.click()
+            # Navigate to "Fruits & Vegetables" or any relevant section where coconuts appear
+            fruits_vegetables_button = self.wait.until(EC.element_to_be_clickable((By.ID, "dep_id_15")))  # Adjust ID if needed
+            fruits_vegetables_button.click()
             time.sleep(5)
-
-            # Click "Fresh Vegetables"
-            fresh_vegetables_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, "//li[text()='Fresh Vegetables']")))
-            fresh_vegetables_button.click()
-            time.sleep(7)  # Allow products to load
 
         except Exception as e:
             print("Error navigating the site:", e)
@@ -50,47 +43,48 @@ class KeellsProductScraper:
             return
 
     def scroll_until_all_products_loaded(self):
-        """Continuously scroll until all products are loaded."""
+        """Scroll down until all products are loaded."""
         last_height = 0
         while True:
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(3)  # Allow more products to load
+            time.sleep(3)
 
-            # Get all product elements
             product_elements = self.driver.find_elements(By.CLASS_NAME, "product-card-name")
-            print(f"Currently loaded products: {len(product_elements)}")  # Debugging info
+            print(f"Currently loaded products: {len(product_elements)}")
 
-            # Check if new products loaded
             new_height = len(product_elements)
-            if new_height == last_height:  # Stop if no new products are loaded
+            if new_height == last_height:
                 break
             last_height = new_height
 
     def scrape_products(self):
-        """Scrape all product names and prices."""
-        self.navigate_to_fresh_vegetables()
+        """Scrape all products, ensuring coconuts are included."""
+        self.navigate_to_fruits_and_vegetables()
         self.scroll_until_all_products_loaded()
 
         try:
-            # Extract product names
             product_names = self.wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "product-card-name")))
-
-            # Extract product prices
             product_prices = self.wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "product-card-final-price")))
 
             products = []
             for name, price in zip(product_names, product_prices):
                 product_name = name.text.strip()
                 product_price = price.text.strip()
+
+                # Ensure coconuts are included
+                if "coconut" in product_name.lower():
+                    print(f"Found Coconut: {product_name} - {product_price}")  # Debugging log
+                if "Garlic" in product_name.lower():
+                    print(f"Found Garlic: {product_name} - {product_price}")
                 products.append([product_name, product_price])
 
-            # Save results to CSV
+            # Save to CSV
             with open('keells_products.csv', 'w', newline='', encoding='utf-8') as csvfile:
                 csv_writer = csv.writer(csvfile)
                 csv_writer.writerow(["name", "Price"])
                 csv_writer.writerows(products)
 
-            print(f"Scraped {len(products)} products. Saved to keells_products.csv.")
+            print(f"Scraped {len(products)} products, including coconuts.")
 
         except Exception as e:
             print("Error scraping products:", e)
